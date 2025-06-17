@@ -16,6 +16,7 @@ import (
 	"github.com/containers/image/v5/internal/set"
 	"github.com/containers/image/v5/manifest"
 	"github.com/containers/image/v5/pkg/compression"
+	"github.com/containers/image/v5/pkg/compression/types"
 	digest "github.com/opencontainers/go-digest"
 	imgspecv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
@@ -156,6 +157,15 @@ func prepareInstanceCopies(list internalManifest.List, instanceDigests []digest.
 	return res, nil
 }
 
+func (c *copier) determineCompressionAlgoActions(algos []types.Algorithm) []types.Algorithm {
+	if c.options.PreserveDigests {
+		// If we are preserving digests, we cannot change the compression algorithm.
+		return []types.Algorithm{}
+	}
+
+	return algos
+}
+
 // copyMultipleImages copies some or all of an image list's instances, using
 // c.policyContext to validate source image admissibility.
 func (c *copier) copyMultipleImages(ctx context.Context) (copiedManifest []byte, retErr error) {
@@ -251,8 +261,9 @@ func (c *copier) copyMultipleImages(ctx context.Context) (copiedManifest []byte,
 				UpdateOldDigest:             instance.sourceDigest,
 				UpdateDigest:                updated.manifestDigest,
 				UpdateSize:                  int64(len(updated.manifest)),
-				UpdateCompressionAlgorithms: updated.compressionAlgorithms,
-				UpdateMediaType:             updated.manifestMIMEType})
+				UpdateCompressionAlgorithms: c.determineCompressionAlgoActions(updated.compressionAlgorithms),
+				UpdateMediaType:             updated.manifestMIMEType,
+			})
 		case instanceCopyClone:
 			logrus.Debugf("Replicating instance %s (%d/%d)", instance.sourceDigest, i+1, len(instanceCopyList))
 			c.Printf("Replicating image %s (%d/%d)\n", instance.sourceDigest, i+1, len(instanceCopyList))
@@ -273,7 +284,7 @@ func (c *copier) copyMultipleImages(ctx context.Context) (copiedManifest []byte,
 				AddArtifactType:          instance.cloneArtifactType,
 				AddPlatform:              instance.clonePlatform,
 				AddAnnotations:           instance.cloneAnnotations,
-				AddCompressionAlgorithms: updated.compressionAlgorithms,
+				AddCompressionAlgorithms: c.determineCompressionAlgoActions(updated.compressionAlgorithms),
 			})
 		default:
 			return nil, fmt.Errorf("copying image: invalid copy operation %d", instance.op)
