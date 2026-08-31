@@ -649,6 +649,10 @@ type SystemContext struct {
 	DockerBearerRegistryToken string
 	// if not "", an User-Agent header is added to each request when contacting a registry.
 	DockerRegistryUserAgent string
+	// Cloudsmith patch: if not "", an X-Cloudsmith-Upstream-Request header with this
+	// value is added to manifest uploads, associating the pushed content with the
+	// Cloudsmith upstream request that initiated the copy.
+	CloudsmithUpstreamRequestUUID string
 	// if true, a V1 ping attempt isn't done to give users a better error. Default is false.
 	// Note that this field is used mainly to integrate containers/image into projectatomic/docker
 	// in order to not break any existing docker's integration tests.
