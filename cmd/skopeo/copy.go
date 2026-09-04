@@ -45,6 +45,7 @@ type copyOptions struct {
 	encryptionKeys           []string                  // Keys needed to encrypt the image
 	decryptionKeys           []string                  // Keys needed to decrypt the image
 	imageParallelCopies      uint                      // Maximum number of parallel requests when copying images
+	destUpstreamRequestUUID  string                    // Cloudsmith patch: upstream request UUID sent as a header on manifest uploads to the destination
 }
 
 func copyCmd(global *globalOptions) *cobra.Command {
@@ -97,6 +98,7 @@ See skopeo(1) section "IMAGE NAMES" for the expected format
 	flags.IntSliceVar(&opts.encryptLayer, "encrypt-layer", []int{}, "*Experimental* the 0-indexed layer indices, with support for negative indexing (e.g. 0 is the first layer, -1 is the last layer)")
 	flags.StringSliceVar(&opts.decryptionKeys, "decryption-key", []string{}, "*Experimental* key needed to decrypt the image")
 	flags.UintVar(&opts.imageParallelCopies, "image-parallel-copies", 0, "Maximum number of image layers to be copied (pulled/pushed) simultaneously. Not setting this field will fall back to containers/image defaults.")
+	flags.StringVar(&opts.destUpstreamRequestUUID, "dest-upstream-request-uuid", "", "Cloudsmith upstream request UUID sent as an X-Cloudsmith-Upstream-Request header on manifest uploads to the destination")
 	return cmd
 }
 
@@ -159,6 +161,9 @@ func (opts *copyOptions) run(args []string, stdout io.Writer) (retErr error) {
 	if err != nil {
 		return err
 	}
+	// Cloudsmith patch: only set on the destination context so the header is
+	// never sent to the source registry.
+	destinationCtx.CloudsmithUpstreamRequestUUID = opts.destUpstreamRequestUUID
 
 	var manifestType string
 	if opts.format.Present() {

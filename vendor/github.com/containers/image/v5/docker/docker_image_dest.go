@@ -516,6 +516,11 @@ func (d *dockerImageDestination) uploadManifest(ctx context.Context, m []byte, t
 	if mimeType != "" {
 		headers["Content-Type"] = []string{mimeType}
 	}
+	// Cloudsmith patch: associate the pushed manifest with the upstream request
+	// that initiated the copy (see types.SystemContext.CloudsmithUpstreamRequestUUID).
+	if d.c.sys != nil && d.c.sys.CloudsmithUpstreamRequestUUID != "" {
+		headers["X-Cloudsmith-Upstream-Request"] = []string{d.c.sys.CloudsmithUpstreamRequestUUID}
+	}
 	res, err := d.c.makeRequest(ctx, http.MethodPut, path, headers, bytes.NewReader(m), v2Auth, nil)
 	if err != nil {
 		return err
